@@ -68,15 +68,43 @@ chmod +x ~/.local/bin/vault
 ```
 
 **Windows:**
-```cmd
-# Option 1: Copy to a directory in your PATH
-copy vault.exe C:\Windows\System32\
 
-# Option 2: Add vault directory to PATH environment variable
-# 1. Right-click "This PC" → Properties → Advanced System Settings
-# 2. Click "Environment Variables"
-# 3. Edit "Path" variable and add the vault directory
-# 4. Restart your terminal
+*Option 1: User Programs Directory (Recommended)*
+```cmd
+# Create a programs directory in your user folder
+mkdir %USERPROFILE%\Programs
+copy vault.exe %USERPROFILE%\Programs\
+
+# Add to user PATH (run as regular user, not admin)
+setx PATH "%PATH%;%USERPROFILE%\Programs"
+```
+
+*Option 2: Using PowerShell (Recommended)*
+```powershell
+# Create programs directory and install
+New-Item -ItemType Directory -Path "$env:USERPROFILE\Programs" -Force
+Move-Item vault.exe "$env:USERPROFILE\Programs\"
+
+# Add to user PATH permanently
+$userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+[Environment]::SetEnvironmentVariable("PATH", "$userPath;$env:USERPROFILE\Programs", "User")
+```
+
+*Option 3: Chocolatey-style (Advanced)*
+```cmd
+# Create standard location
+mkdir "C:\tools\vault"
+copy vault.exe "C:\tools\vault\"
+
+# Add to system PATH (requires admin)
+setx PATH "%PATH%;C:\tools\vault" /M
+```
+
+*Option 4: Portable (No Installation)*
+```cmd
+# Just extract to any folder and run with full path
+# No PATH modification needed
+C:\path\to\vault\vault.exe --version
 ```
 
 **Verify Installation:**
