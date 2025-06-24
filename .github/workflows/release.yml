@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Get version from tag
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+    
+    - name: Build cross-platform binaries
+      run: |
+        # Create dist directory
+        mkdir -p dist
+        
+        # Build configurations
+        platforms=(
+          "linux/amd64"
+          "linux/arm64" 
+          "darwin/amd64"
+          "darwin/arm64"
+          "windows/amd64"
+          "windows/arm64"
+        )
+        
+        for platform in "${platforms[@]}"; do
+          IFS='/' read -r -a array <<< "$platform"
+          GOOS="${array[0]}"
+          GOARCH="${array[1]}"
+          
+          output_name="vault-${{ steps.version.outputs.VERSION }}-${GOOS}-${GOARCH}"
+          
+          if [ "$GOOS" = "windows" ]; then
+            output_name="${output_name}.exe"
+          fi
+          
+          echo "Building for $GOOS/$GOARCH..."
+          
+          env GOOS="$GOOS" GOARCH="$GOARCH" go build \
+            -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o "dist/$output_name" \
+            .
+          
+          # Create compressed archives
+          if [ "$GOOS" = "windows" ]; then
+            (cd dist && zip -q "${output_name%.exe}.zip" "$output_name")
+            rm "dist/$output_name"
+          else
+            (cd dist && tar -czf "${output_name}.tar.gz" "$output_name")
+            rm "dist/$output_name"
+          fi
+        done
+    
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+        body: |
+          ## 🔐 Vault v${{ steps.version.outputs.VERSION }}
+          
+          ### Download Instructions
+          
+          **Linux (x64):** `vault-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz`  
+          **Linux (ARM64):** `vault-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz`  
+          **macOS (Intel):** `vault-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz`  
+          **macOS (Apple Silicon):** `vault-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz`  
+          **Windows (x64):** `vault-${{ steps.version.outputs.VERSION }}-windows-amd64.zip`  
+          **Windows (ARM64):** `vault-${{ steps.version.outputs.VERSION }}-windows-arm64.zip`
+          
+          ### Installation
+          
+          1. Download the appropriate file for your OS/architecture
+          2. Extract the archive
+          3. Copy the `vault` binary to your PATH (see README for details)
+          4. Run `vault --version` to verify installation
+          
+          ### Checksums
+          
+          Verify your download integrity using the `checksums.txt` file.
+          
+          ```bash
+          # Linux/macOS
+          sha256sum -c checksums.txt
+          
+          # Windows PowerShell  
+          Get-FileHash vault.exe -Algorithm SHA256
+          ```
+          
+          **Full changelog:** https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.VERSION }}...HEAD
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
