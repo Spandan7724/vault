@@ -39,6 +39,9 @@ Download the latest release for your platform from [GitHub Releases](https://git
 # Linux/macOS example (replace with your platform and version)
 curl -L https://github.com/Spandan7724/vault/releases/download/v1.0.0/vault-v1.0.0-linux-amd64.tar.gz | tar xz
 sudo mv vault /usr/local/bin/
+
+# Or one-liner install:
+curl -L https://github.com/Spandan7724/vault/releases/download/v1.0.0/vault-v1.0.0-linux-amd64.tar.gz | sudo tar xz -C /usr/local/bin/
 ```
 
 #### From Source

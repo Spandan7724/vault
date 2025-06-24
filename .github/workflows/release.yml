@@ -43,27 +43,33 @@ jobs:
           GOOS="${array[0]}"
           GOARCH="${array[1]}"
           
-          output_name="vault-${{ steps.version.outputs.VERSION }}-${GOOS}-${GOARCH}"
-          
+          # Binary name (what goes inside the archive)
           if [ "$GOOS" = "windows" ]; then
-            output_name="${output_name}.exe"
+            binary_name="vault.exe"
+          else
+            binary_name="vault"
           fi
+          
+          # Archive name (the downloadable file)
+          archive_name="vault-${{ steps.version.outputs.VERSION }}-${GOOS}-${GOARCH}"
           
           echo "Building for $GOOS/$GOARCH..."
           
+          # Build the binary
           env GOOS="$GOOS" GOARCH="$GOARCH" go build \
             -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
-            -o "dist/$output_name" \
+            -o "dist/$binary_name" \
             .
           
-          # Create compressed archives
+          # Create compressed archives with correct binary name inside
           if [ "$GOOS" = "windows" ]; then
-            (cd dist && zip -q "${output_name%.exe}.zip" "$output_name")
-            rm "dist/$output_name"
+            (cd dist && zip -q "${archive_name}.zip" "$binary_name")
           else
-            (cd dist && tar -czf "${output_name}.tar.gz" "$output_name")
-            rm "dist/$output_name"
+            (cd dist && tar -czf "${archive_name}.tar.gz" "$binary_name")
           fi
+          
+          # Clean up the binary (keep only the archive)
+          rm "dist/$binary_name"
         done
     
     - name: Generate checksums

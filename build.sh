@@ -30,32 +30,36 @@ for platform in "${platforms[@]}"; do
     GOOS="${array[0]}"
     GOARCH="${array[1]}"
     
-    output_name="vault-${VERSION}-${GOOS}-${GOARCH}"
-    
-    # Add .exe extension for Windows
+    # Binary name (what goes inside the archive)
     if [ "$GOOS" = "windows" ]; then
-        output_name="${output_name}.exe"
+        binary_name="vault.exe"
+    else
+        binary_name="vault"
     fi
+    
+    # Archive name (the downloadable file)
+    archive_name="vault-${VERSION}-${GOOS}-${GOARCH}"
     
     echo "Building for $GOOS/$GOARCH..."
     
     env GOOS="$GOOS" GOARCH="$GOARCH" go build \
         -ldflags="-s -w -X main.version=${VERSION}" \
-        -o "$BUILD_DIR/$output_name" \
+        -o "$BUILD_DIR/$binary_name" \
         .
     
-    # Create compressed archives
+    # Create compressed archives with correct binary name inside
     if [ "$GOOS" = "windows" ]; then
         # Create zip for Windows
-        (cd $BUILD_DIR && zip -q "${output_name%.exe}.zip" "$output_name")
-        rm "$BUILD_DIR/$output_name"
+        (cd $BUILD_DIR && zip -q "${archive_name}.zip" "$binary_name")
     else
         # Create tar.gz for Unix-like systems
-        (cd $BUILD_DIR && tar -czf "${output_name}.tar.gz" "$output_name")
-        rm "$BUILD_DIR/$output_name"
+        (cd $BUILD_DIR && tar -czf "${archive_name}.tar.gz" "$binary_name")
     fi
     
-    echo "✓ Built $output_name"
+    # Clean up the binary (keep only the archive)
+    rm "$BUILD_DIR/$binary_name"
+    
+    echo "✓ Built ${archive_name}"
 done
 
 echo ""
